@@ -6,16 +6,19 @@ Eurostat bezieht die Daten direkt von Destatis — gleiche Qualitaet,
 aber frei zugaenglich ohne API-Key.
 """
 
+from datetime import date
+
 import httpx
 
 from src.config import settings
+from src.clients.http import bounded_get
 
 
 # Vordefinierte Indikatoren mit Eurostat-Dataset-IDs und Parametern
 INDICATORS = {
     "bevoelkerung": {
         "dataset": "demo_pjan",
-        "params": {"geo": "DE", "age": "TOTAL", "sex": "T"},
+        "params": {"geo": "DE", "age": "TOTAL", "sex": "T", "unit": "NR"},
         "label": "Bevoelkerung am 1. Januar",
         "einheit": "Personen",
     },
@@ -87,27 +90,32 @@ class DestatisClient:
 
         params = dict(config["params"])
         params["lang"] = "de"
+        params["freq"] = "A"
 
-        if year:
+        if year is not None:
+            if not 1900 <= year <= date.today().year:
+                raise ValueError("Jahr muss zwischen 1900 und dem aktuellen Jahr liegen.")
             params["time"] = str(year)
         else:
             # Letzte 5 Jahre
-            params["sinceTimePeriod"] = "2020"
+            params["sinceTimePeriod"] = str(date.today().year - 4)
 
         url = f"{self._base}/data/{config['dataset']}"
 
-        resp = await self._client.get(url, params=params)
+        resp = await bounded_get(self._client, url, params=params)
         resp.raise_for_status()
         data = resp.json()
 
         # Eurostat JSON-Response parsen
         values = data.get("value", {})
-        time_dim = (
-            data.get("dimension", {})
-            .get("time", {})
-            .get("category", {})
-            .get("label", {})
-        )
+        # A flat time series is only unambiguous when every other dimension
+        # has one member. Do not silently mix units or population categories.
+        dimensions = data.get("id", [])
+        sizes = data.get("size", [])
+        if len(dimensions) != len(sizes) or "time" not in dimensions:
+            raise ValueError("Ungültige Dimensionen in der Statistikantwort.")
+        if any(size != 1 for name, size in zip(dimensions, sizes) if name != "time"):
+            raise ValueError("Statistikantwort enthält mehrere Datenreihen.")
 
         # Index-zu-Jahr Mapping
         time_index = (
@@ -118,9 +126,14 @@ class DestatisClient:
         )
 
         # Werte den Jahren zuordnen
+        if isinstance(time_index, list):
+            time_index = {key: idx for idx, key in enumerate(time_index)}
         ergebnisse = {}
         for zeit_key, idx in time_index.items():
-            wert = values.get(str(idx))
+            if isinstance(values, list):
+                wert = values[idx] if 0 <= idx < len(values) else None
+            else:
+                wert = values.get(str(idx))
             if wert is not None:
                 ergebnisse[zeit_key] = wert
 
@@ -140,7 +153,8 @@ class DestatisClient:
         """
         # Eurostat Table of Contents als JSON
         url = f"{self._base}/dissemination/catalogue/toc"
-        resp = await self._client.get(
+        resp = await bounded_get(
+            self._client,
             url,
             params={"q": query, "lang": "de", "limit": limit},
         )

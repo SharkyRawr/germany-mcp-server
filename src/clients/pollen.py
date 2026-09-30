@@ -3,6 +3,7 @@
 import httpx
 
 from src.config import settings
+from src.clients.http import bounded_get
 
 
 # Pollenarten im DWD-Datensatz
@@ -40,7 +41,7 @@ class PollenClient:
         Gibt Vorhersage für heute, morgen und übermorgen zurück,
         aufgeschlüsselt nach Region und Pollenart.
         """
-        resp = await self._client.get(f"{self._base}/s31fg.json")
+        resp = await bounded_get(self._client, f"{self._base}/s31fg.json")
         resp.raise_for_status()
         return resp.json()
 

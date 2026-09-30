@@ -1,6 +1,10 @@
 """DWD-Warnungen-Tools — Offizielle Wetterwarnungen des Deutschen Wetterdienstes."""
 
+import json
+
 from mcp.server.fastmcp import FastMCP
+
+from src.tools.errors import safe_error, safe_tool
 
 from src.clients.dwd_warnings import DwdWarningsClient, WARN_LEVELS
 
@@ -11,6 +15,7 @@ def register_dwd_warnungen_tools(mcp: FastMCP):
     """DWD-Warnungs-Tools registrieren."""
 
     @mcp.tool()
+    @safe_tool
     async def get_german_weather_warnings(
         region: str = "",
     ) -> dict:
@@ -28,11 +33,11 @@ def register_dwd_warnungen_tools(mcp: FastMCP):
             data = await _dwd.get_warnings(region or None)
             warnungen_raw = data.get("warnungen", [])
 
-            # Deduplizieren nach headline+regionName (DWD liefert Dopplungen)
+            # Nur identische Meldungen entfernen, nicht andere Zeiträume/Schweregrade.
             seen = set()
             items = []
             for w in warnungen_raw:
-                key = f"{w.get('headline', '')}-{w.get('regionName', '')}"
+                key = json.dumps(w, sort_keys=True, ensure_ascii=False)
                 if key in seen:
                     continue
                 seen.add(key)
@@ -70,4 +75,4 @@ def register_dwd_warnungen_tools(mcp: FastMCP):
                 "quelle": "Deutscher Wetterdienst (DWD)",
             }
         except Exception as e:
-            return {"error": str(e)}
+            return {"error": safe_error(e)}

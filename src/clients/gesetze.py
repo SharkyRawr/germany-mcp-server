@@ -4,11 +4,15 @@ Laedt den XML-Gesamtindex aller Bundesgesetze und ermoeglicht
 eine Volltextsuche ueber Titel. Kein API-Key noetig.
 """
 
-import xml.etree.ElementTree as ET
+import asyncio
+from time import monotonic
+
+from defusedxml import ElementTree as ET
 
 import httpx
 
 from src.config import settings
+from src.clients.http import bounded_get
 
 
 class GesetzeClient:
@@ -22,20 +26,30 @@ class GesetzeClient:
         self._client = httpx.AsyncClient(timeout=settings.http_timeout)
         self._base = settings.gesetze_base_url
         self._cache: list[dict] | None = None
+        self._cache_expires = 0.0
+        self._cache_lock = asyncio.Lock()
 
     async def _load_index(self) -> list[dict]:
         """Gesetzes-Index laden und cachen (ca. 6000+ Eintraege)."""
-        if self._cache is not None:
-            return self._cache
+        async with self._cache_lock:
+            if self._cache is not None and monotonic() < self._cache_expires:
+                return self._cache
+            # Failed refreshes raise; an expired index is never presented as fresh.
+            index = await self._fetch_index()
+            self._cache = index
+            self._cache_expires = monotonic() + settings.law_index_cache_ttl
+            return index
 
-        resp = await self._client.get(
+    async def _fetch_index(self) -> list[dict]:
+        resp = await bounded_get(
+            self._client,
             f"{self._base}/gii-toc.xml",
             follow_redirects=True,
         )
         resp.raise_for_status()
 
         # XML parsen
-        root = ET.fromstring(resp.text)
+        root = ET.fromstring(resp.content, forbid_dtd=True)
         gesetze = []
         for item in root.findall("item"):
             title_el = item.find("title")
@@ -57,7 +71,6 @@ class GesetzeClient:
                     "url": f"https://www.gesetze-im-internet.de/{abkuerzung}/" if abkuerzung else "",
                 })
 
-        self._cache = gesetze
         return gesetze
 
     async def search(self, query: str, limit: int = 10) -> list[dict]:
@@ -67,8 +80,12 @@ class GesetzeClient:
             query: Suchbegriff (z.B. "Grundgesetz", "Strafgesetzbuch", "Mietrecht")
             limit: Max. Ergebnisse (Standard: 10)
         """
+        if not 1 <= limit <= 50:
+            raise ValueError("limit muss zwischen 1 und 50 liegen.")
+        query_lower = query.strip().lower()
+        if not query_lower:
+            raise ValueError("Suchbegriff darf nicht leer sein.")
         gesetze = await self._load_index()
-        query_lower = query.lower()
         query_parts = query_lower.split()
 
         treffer = []

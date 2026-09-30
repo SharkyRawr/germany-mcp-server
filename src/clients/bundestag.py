@@ -3,6 +3,7 @@
 import httpx
 
 from src.config import settings
+from src.clients.http import bounded_get
 
 
 class BundestagClient:
@@ -25,31 +26,35 @@ class BundestagClient:
         return headers
 
     async def search_drucksachen(
-        self, query: str, wahlperiode: int = 20, limit: int = 10
+        self, query: str, wahlperiode: int = 21, limit: int = 10
     ) -> dict:
         """Bundestagsdrucksachen durchsuchen.
 
         Args:
             query: Suchbegriff
-            wahlperiode: Wahlperiode (20 = aktuell)
+            wahlperiode: Wahlperiode (21 = aktuell)
             limit: Max. Ergebnisse
         """
-        resp = await self._client.get(
+        if isinstance(limit, bool) or not isinstance(limit, int) or not 1 <= limit <= 100:
+            raise ValueError("limit muss zwischen 1 und 100 liegen.")
+        resp = await bounded_get(
+            self._client,
             f"{self._base}/drucksache",
             params={
                 "f.zuordnung": "BT",
                 "f.wahlperiode": wahlperiode,
                 "f.drucksachetyp": "Gesetzentwurf",
-                "cursor": query,
+                "f.titel": query,
                 "format": "json",
             },
             headers=self._headers(),
         )
         resp.raise_for_status()
-        return resp.json()
+        data = resp.json()
+        return {**data, "documents": data.get("documents", [])[:limit]}
 
     async def search_vorgaenge(
-        self, query: str, wahlperiode: int = 20, limit: int = 10
+        self, query: str, wahlperiode: int = 21, limit: int = 10
     ) -> dict:
         """Parlamentarische Vorgänge durchsuchen."""
         params = {
@@ -58,23 +63,31 @@ class BundestagClient:
         }
         if query:
             params["f.titel"] = query
-        resp = await self._client.get(
+        if isinstance(limit, bool) or not isinstance(limit, int) or not 1 <= limit <= 100:
+            raise ValueError("limit muss zwischen 1 und 100 liegen.")
+        resp = await bounded_get(
+            self._client,
             f"{self._base}/vorgang",
             params=params,
             headers=self._headers(),
         )
         resp.raise_for_status()
-        return resp.json()
+        data = resp.json()
+        return {**data, "documents": data.get("documents", [])[:limit]}
 
     async def get_aktivitaeten(self, limit: int = 10) -> dict:
         """Letzte parlamentarische Aktivitäten."""
-        resp = await self._client.get(
+        if isinstance(limit, bool) or not isinstance(limit, int) or not 1 <= limit <= 100:
+            raise ValueError("limit muss zwischen 1 und 100 liegen.")
+        resp = await bounded_get(
+            self._client,
             f"{self._base}/aktivitaet",
             params={"format": "json"},
             headers=self._headers(),
         )
         resp.raise_for_status()
-        return resp.json()
+        data = resp.json()
+        return {**data, "documents": data.get("documents", [])[:limit]}
 
     async def close(self):
         """HTTP-Client schließen."""

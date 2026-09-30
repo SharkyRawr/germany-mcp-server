@@ -37,7 +37,7 @@ MCP-Server der AI-Agents Zugriff auf deutsche Behörden-Daten gibt — 16 Tools 
 - `pollenflug` — Pollenflug-Vorhersage für 27 Regionen (Birke, Gräser, Hasel etc.)
 
 ### Statistik (NEU in v0.2.0)
-- `get_destatis_data` — Offizielle Destatis-Statistiken: Bevölkerung, BIP, Arbeitslosenquote, Inflation, Erwerbstätigkeit. Zeitreihen ab 2020.
+- `get_destatis_data` — Offizielle Destatis-Statistiken: Bevölkerung, BIP, Arbeitslosenquote, Inflation, Erwerbstätigkeit. Standardmäßig die letzten fünf Kalenderjahre.
 
 ### Recht (NEU in v0.2.0)
 - `search_german_laws` — 6000+ Bundesgesetze durchsuchen (Titel, Abkürzung). Direkt-Links zu gesetze-im-internet.de.
@@ -130,6 +130,25 @@ BUNDESTAG_API_KEY=dein-key-hier
 
 ### v0.1.2
 - Initiale Version mit 12 Tools
+
+## Datenqualität und Fehlerbehandlung
+
+- Stromerzeugung enthält alle zwölf erfassten Energieträger für denselben neuesten verfügbaren Zeitstempel. Fehlende Werte werden als `null` ausgewiesen; unvollständige Gesamtsummen und Prozentanteile werden nicht berechnet. `vollstaendig` und `fehlende_traeger` zeigen Datenlücken an.
+- Energiepreise verwenden heute und die 13 vorherigen Kalendertage in `Europe/Berlin`, auch über Datenblockgrenzen und Zeitumstellungen hinweg. `zeitraum_von`, `zeitraum_bis`, `anzahl_tage_mit_daten` und `vollstaendig` beschreiben die Abdeckung. Kennzahlen basieren bei Lücken nur auf verfügbaren Tagen; ältere Werte füllen keine Lücken auf.
+- Bundestag-Clientmethoden begrenzen die zurückgegebenen Dokumente auf `limit` (1–100). Die Gesamtzahl der Treffer bleibt erhalten.
+- Der Gesetzesindex wird eine Stunde zwischengespeichert. Gleichzeitige Anfragen teilen eine Aktualisierung; bei einem Aktualisierungsfehler werden abgelaufene Daten nicht als aktuell ausgegeben.
+- Alle HTTP-Antworten werden beim Lesen auf 16 MiB und 30 Sekunden Gesamtdauer begrenzt. Der Client fordert unkomprimierte Antworten an und lehnt unerwartete Kompression ab. Weiterleitungen bleiben auf denselben Ursprung beschränkt.
+- Toolfehler geben keine rohen Ausnahmeinformationen zurück. Die Fehlerprotokollierung nennt nur die Ausnahmeklasse.
+
+Die Grenzwerte und die Cache-Dauer stehen in `src/config.py`.
+
+## Tests
+
+Nach der Installation lassen sich die Regressionstests ohne externe API-Aufrufe ausführen:
+
+```bash
+python -m unittest discover -s tests -v
+```
 
 ## Lizenz
 

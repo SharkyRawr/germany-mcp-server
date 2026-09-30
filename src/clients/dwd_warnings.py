@@ -10,6 +10,7 @@ import json
 import httpx
 
 from src.config import settings
+from src.clients.http import bounded_get
 
 
 # Schweregrad-Mapping
@@ -59,7 +60,7 @@ class DwdWarningsClient:
             region: Optionaler Filter — Bundesland-Name oder Kuerzel
                     (z.B. "Bayern", "NRW", "Sachsen")
         """
-        resp = await self._client.get(self._url)
+        resp = await bounded_get(self._client, self._url)
         resp.raise_for_status()
 
         # JSONP-Wrapper entfernen: warnWetter.loadWarnings({...})
@@ -94,9 +95,10 @@ class DwdWarningsClient:
         if region:
             region_lower = region.lower().strip()
             # Kuerzel in vollen Namen umwandeln
-            region_full = BUNDESLAENDER.get(region.upper(), "")
+            region_full = BUNDESLAENDER.get(region.strip().upper(), "")
             if region_full:
                 region_lower = region_full.lower()
+            is_state = region_lower in {name.lower() for name in BUNDESLAENDER.values()}
 
             filtered = []
             for w in all_warnings:
@@ -104,11 +106,15 @@ class DwdWarningsClient:
                 region_name = (w.get("regionName", "") or "").lower()
                 state_short = (w.get("stateShort", "") or "").lower()
 
-                if (
-                    region_lower in state
-                    or region_lower in region_name
-                    or region_lower == state_short
-                ):
+                if is_state:
+                    matches = state == region_lower
+                else:
+                    matches = (
+                        region_lower in state
+                        or region_lower in region_name
+                        or region_lower == state_short
+                    )
+                if matches:
                     filtered.append(w)
 
             all_warnings = filtered

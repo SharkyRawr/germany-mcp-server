@@ -2,7 +2,10 @@
 
 from mcp.server.fastmcp import FastMCP
 
+from src.tools.errors import safe_tool
+
 from src.clients.pollen import PollenClient, POLLEN_LEVELS
+from src.clients.dwd_warnings import BUNDESLAENDER
 
 _pollen = PollenClient()
 
@@ -29,6 +32,7 @@ def register_gesundheit_tools(mcp: FastMCP):
     """Gesundheits-bezogene MCP-Tools registrieren."""
 
     @mcp.tool()
+    @safe_tool
     async def pollenflug(region: str = "") -> dict:
         """Aktuelle Pollenflug-Vorhersage für eine Region in Deutschland.
 
@@ -44,7 +48,7 @@ def register_gesundheit_tools(mcp: FastMCP):
 
         # Region filtern wenn angegeben
         if region:
-            region_lower = region.lower()
+            region_lower = BUNDESLAENDER.get(region.strip().upper(), region.strip()).lower()
             content = [
                 r for r in content
                 if region_lower in (r.get("region_name", "") or "").lower()

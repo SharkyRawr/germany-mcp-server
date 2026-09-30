@@ -2,6 +2,8 @@
 
 from mcp.server.fastmcp import FastMCP
 
+from src.tools.errors import safe_error, safe_tool
+
 from src.clients.bundestag import BundestagClient
 
 _bundestag = BundestagClient()
@@ -11,9 +13,10 @@ def register_politik_tools(mcp: FastMCP):
     """Politik-bezogene MCP-Tools registrieren."""
 
     @mcp.tool()
+    @safe_tool
     async def bundestag_suche(
         suchbegriff: str,
-        wahlperiode: int = 20,
+        wahlperiode: int = 21,
     ) -> dict:
         """Im Bundestag nach Gesetzentwürfen und Vorgängen suchen.
 
@@ -21,11 +24,11 @@ def register_politik_tools(mcp: FastMCP):
 
         Args:
             suchbegriff: Suchbegriff (z.B. "Klimaschutz", "Digitalisierung")
-            wahlperiode: Wahlperiode (20 = aktuell, 19 = vorherige)
+            wahlperiode: Wahlperiode (21 = aktuell, 20 = vorherige)
         """
         # Vorgänge durchsuchen
         try:
-            vorgaenge = await _bundestag.search_vorgaenge(suchbegriff, wahlperiode)
+            vorgaenge = await _bundestag.search_vorgaenge(suchbegriff, wahlperiode, limit=15)
             docs = vorgaenge.get("documents", [])
 
             items = []
@@ -45,16 +48,17 @@ def register_politik_tools(mcp: FastMCP):
                 "vorgaenge": items,
             }
         except Exception as e:
-            return {"error": str(e), "hinweis": "Bundestag DIP API ggf. nicht erreichbar"}
+            return {"error": safe_error(e), "hinweis": "Bundestag DIP API ggf. nicht erreichbar"}
 
     @mcp.tool()
+    @safe_tool
     async def bundestag_aktivitaeten() -> dict:
         """Letzte parlamentarische Aktivitäten im Bundestag.
 
         Zeigt aktuelle Debatten, Abstimmungen und Beschlüsse.
         """
         try:
-            data = await _bundestag.get_aktivitaeten()
+            data = await _bundestag.get_aktivitaeten(limit=15)
             docs = data.get("documents", [])
 
             items = []
@@ -63,7 +67,7 @@ def register_politik_tools(mcp: FastMCP):
                     "titel": a.get("titel", ""),
                     "typ": a.get("aktivitaetsart", ""),
                     "datum": a.get("datum", ""),
-                    "fundstelle": a.get("fundstelle", {}).get("pdf_url", ""),
+                    "fundstelle": (a.get("fundstelle") or {}).get("pdf_url", ""),
                 })
 
             return {
@@ -71,4 +75,4 @@ def register_politik_tools(mcp: FastMCP):
                 "aktivitaeten": items,
             }
         except Exception as e:
-            return {"error": str(e)}
+            return {"error": safe_error(e)}

@@ -2,6 +2,8 @@
 
 from mcp.server.fastmcp import FastMCP
 
+from src.tools.errors import safe_error, safe_tool
+
 from src.clients.gesetze import GesetzeClient
 
 _gesetze = GesetzeClient()
@@ -11,6 +13,7 @@ def register_recht_tools(mcp: FastMCP):
     """Rechts-bezogene MCP-Tools registrieren."""
 
     @mcp.tool()
+    @safe_tool
     async def search_german_laws(
         query: str,
         limit: int = 10,
@@ -25,6 +28,10 @@ def register_recht_tools(mcp: FastMCP):
                 (z.B. "Grundgesetz", "Mietrecht", "bgb", "Datenschutz")
             limit: Max. Ergebnisse (Standard: 10, Max: 50)
         """
+        if limit < 1:
+            return {"error": "limit muss mindestens 1 sein."}
+        if not query.strip():
+            return {"error": "Suchbegriff darf nicht leer sein."}
         limit = min(limit, 50)
 
         try:
@@ -47,4 +54,4 @@ def register_recht_tools(mcp: FastMCP):
                 "quelle": "gesetze-im-internet.de (BMJ)",
             }
         except Exception as e:
-            return {"error": str(e)}
+            return {"error": safe_error(e)}

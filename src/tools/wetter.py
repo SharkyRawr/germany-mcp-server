@@ -2,7 +2,10 @@
 
 from mcp.server.fastmcp import FastMCP
 
+from src.tools.errors import safe_tool
+
 from src.clients.brightsky import BrightSkyClient
+from src.validation import coordinates
 
 _brightsky = BrightSkyClient()
 
@@ -43,7 +46,8 @@ STAEDTE = {
 
 def _resolve_coords(ort: str, lat: float | None, lon: float | None):
     """Stadt-Name in Koordinaten auflösen oder übergebene nutzen."""
-    if lat is not None and lon is not None:
+    if lat is not None or lon is not None:
+        coordinates(lat, lon)
         return lat, lon
 
     key = ort.lower().strip()
@@ -61,6 +65,7 @@ def register_wetter_tools(mcp: FastMCP):
     """Wetter-bezogene MCP-Tools registrieren."""
 
     @mcp.tool()
+    @safe_tool
     async def wetter_aktuell(
         ort: str = "",
         lat: float | None = None,
@@ -99,6 +104,7 @@ def register_wetter_tools(mcp: FastMCP):
         }
 
     @mcp.tool()
+    @safe_tool
     async def wetter_warnungen(
         ort: str = "",
         lat: float | None = None,
@@ -115,7 +121,7 @@ def register_wetter_tools(mcp: FastMCP):
             lon: Längengrad (optional)
         """
         resolved_lat, resolved_lon = None, None
-        if ort or (lat is not None and lon is not None):
+        if ort or lat is not None or lon is not None:
             resolved_lat, resolved_lon = _resolve_coords(ort, lat, lon)
 
         data = await _brightsky.get_alerts(resolved_lat, resolved_lon)
@@ -133,7 +139,7 @@ def register_wetter_tools(mcp: FastMCP):
             })
 
         return {
-            "ort": ort or "bundesweit",
+            "ort": ort or (f"{resolved_lat},{resolved_lon}" if resolved_lat is not None else "bundesweit"),
             "anzahl_warnungen": len(alerts),
             "warnungen": items,
         }

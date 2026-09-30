@@ -2,6 +2,8 @@
 
 from mcp.server.fastmcp import FastMCP
 
+from src.tools.errors import safe_error, safe_tool
+
 from src.clients.destatis import DestatisClient, INDICATORS
 
 _destatis = DestatisClient()
@@ -11,6 +13,7 @@ def register_statistik_tools(mcp: FastMCP):
     """Statistik-bezogene MCP-Tools registrieren."""
 
     @mcp.tool()
+    @safe_tool
     async def get_destatis_data(
         indicator: str = "bevoelkerung",
         year: int | None = None,
@@ -57,6 +60,6 @@ def register_statistik_tools(mcp: FastMCP):
             }
         except Exception as e:
             return {
-                "error": str(e),
+                "error": safe_error(e),
                 "verfuegbare_indikatoren": list(INDICATORS.keys()),
             }

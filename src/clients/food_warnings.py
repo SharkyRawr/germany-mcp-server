@@ -3,6 +3,7 @@
 import httpx
 
 from src.config import settings
+from src.clients.http import bounded_get
 
 
 class FoodWarningsClient:
@@ -18,7 +19,8 @@ class FoodWarningsClient:
 
     async def get_warnings(self, rows: int = 20) -> list[dict]:
         """Aktuelle Lebensmittelwarnungen und Produktrückrufe."""
-        resp = await self._client.get(
+        resp = await bounded_get(
+            self._client,
             f"{self._base}/warnings/merged",
             params={
                 "rows": rows,

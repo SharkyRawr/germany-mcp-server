@@ -2,6 +2,8 @@
 
 from mcp.server.fastmcp import FastMCP
 
+from src.tools.errors import safe_error, safe_tool
+
 from src.clients.smard import SmardClient
 
 _smard = SmardClient()
@@ -30,6 +32,7 @@ def register_energiepreise_tools(mcp: FastMCP):
     """Energiepreis-Tools registrieren."""
 
     @mcp.tool()
+    @safe_tool
     async def get_energy_prices(
         type: str = "electricity",
     ) -> dict:
@@ -37,6 +40,8 @@ def register_energiepreise_tools(mcp: FastMCP):
 
         Zeigt Boersenpreise fuer Strom (Day-Ahead, EPEX Spot)
         und Gasimportpreise (BAFA). Daten der Bundesnetzagentur (SMARD).
+        Zeitraum: heute und die 13 vorherigen Kalendertage (Europe/Berlin).
+        Bei Datenlücken werden Kennzahlen nur aus verfügbaren Tagen berechnet.
 
         Args:
             type: Art des Energietraegers.
@@ -53,28 +58,12 @@ def register_energiepreise_tools(mcp: FastMCP):
             }
 
         try:
-            # Tagesdaten abrufen
-            data = await _smard.get_chart_data(
-                config["filter_id"],
-                resolution="day",
-            )
-            series = data.get("series", [])
-
-            # Letzte Werte mit Daten sammeln (max 14 Tage)
-            werte = []
-            for ts, val in reversed(series):
-                if val is not None:
-                    werte.append({
-                        "timestamp": ts,
-                        "preis": round(val, 2),
-                    })
-                    if len(werte) >= 14:
-                        break
-
-            werte.reverse()
+            data = await _smard.get_daily_window(config["filter_id"], days=14)
+            series = data["series"]
+            werte = [{"timestamp": ts, "preis": round(val, 2)} for ts, val in series]
 
             # Statistik berechnen
-            preise = [w["preis"] for w in werte]
+            preise = [val for _, val in series]
             aktuell = preise[-1] if preise else None
             durchschnitt = round(sum(preise) / len(preise), 2) if preise else None
             minimum = min(preise) if preise else None
@@ -91,16 +80,26 @@ def register_energiepreise_tools(mcp: FastMCP):
                 else:
                     trend = f"stabil ({diff:+.1f} {config['einheit']})"
 
-            return {
+            result = {
                 "typ": config["label"],
                 "einheit": config["einheit"],
-                "aktueller_preis": aktuell,
+                "aktueller_preis": round(aktuell, 2) if aktuell is not None else None,
+                "preis_timestamp": werte[-1]["timestamp"] if werte else None,
+                "zeitraum_von": data["von"],
+                "zeitraum_bis": data["bis"],
+                "anzahl_tage_mit_daten": len(werte),
+                "vollstaendig": data["vollstaendig"],
                 "durchschnitt_14_tage": durchschnitt,
-                "minimum_14_tage": minimum,
-                "maximum_14_tage": maximum,
+                "minimum_14_tage": round(minimum, 2) if minimum is not None else None,
+                "maximum_14_tage": round(maximum, 2) if maximum is not None else None,
                 "trend": trend,
                 "verlauf": werte,
                 "quelle": "SMARD / Bundesnetzagentur",
             }
+            if not data["vollstaendig"]:
+                result["hinweis"] = "Daten im 14-Tage-Zeitraum unvollständig; Statistik nutzt nur verfügbare Tage."
+            if not werte:
+                result["error"] = "Keine Preisdaten im angefragten Zeitraum verfügbar."
+            return result
         except Exception as e:
-            return {"error": str(e)}
+            return {"error": safe_error(e)}

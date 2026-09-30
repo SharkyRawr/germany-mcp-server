@@ -2,6 +2,8 @@
 
 from mcp.server.fastmcp import FastMCP
 
+from src.tools.errors import safe_error, safe_tool
+
 from src.clients.smard import SmardClient, SMARD_FILTERS
 
 _smard = SmardClient()
@@ -11,68 +13,65 @@ def register_energie_tools(mcp: FastMCP):
     """Energie-bezogene MCP-Tools registrieren."""
 
     @mcp.tool()
+    @safe_tool
     async def strom_erzeugung() -> dict:
         """Aktuelle Stromerzeugung in Deutschland nach Energieträger.
 
-        Zeigt wie viel Strom gerade aus Wind, Solar, Kohle, Gas etc.
-        erzeugt wird. Daten der Bundesnetzagentur (SMARD).
+        Zeigt die Stromerzeugung des neuesten verfügbaren Tages aus
+        Wind, Solar, Kohle, Gas etc. Daten der Bundesnetzagentur (SMARD).
         """
-        ergebnisse = {}
-
-        # Wichtigste Energieträger abfragen
-        wichtige = {
-            "wind_onshore": 4067,
-            "wind_offshore": 1225,
-            "photovoltaik": 4068,
-            "biomasse": 4169,
-            "wasserkraft": 4070,
-            "braunkohle": 1223,
-            "steinkohle": 4071,
-            "erdgas": 4072,
-            "kernenergie": 1224,
-        }
-
-        for name, filter_id in wichtige.items():
+        renewable = (
+            "wind_onshore", "wind_offshore", "photovoltaik", "biomasse",
+            "wasserkraft", "sonstige_erneuerbare",
+        )
+        conventional = (
+            "braunkohle", "steinkohle", "erdgas", "kernenergie",
+            "pumpspeicher", "sonstige_konventionelle",
+        )
+        readings = {}
+        errors = {}
+        for name in renewable + conventional:
             try:
-                data = await _smard.get_chart_data(filter_id, resolution="day")
-                series = data.get("series", [])
-                # Letzten Wert nehmen der nicht None ist
-                last_value = None
-                last_timestamp = None
-                for ts, val in reversed(series):
-                    if val is not None:
-                        last_value = val
-                        last_timestamp = ts
-                        break
-                ergebnisse[name] = {
-                    "mwh": last_value,
-                    "timestamp": last_timestamp,
-                }
-            except Exception:
-                ergebnisse[name] = {"mwh": None, "error": "Daten nicht verfügbar"}
+                data = await _smard.get_chart_data(SMARD_FILTERS[name], resolution="day")
+                readings[name] = {ts: val for ts, val in data.get("series", []) if val is not None}
+            except Exception as exc:
+                readings[name] = {}
+                errors[name] = safe_error(exc)
 
-        # Erneuerbare vs. Konventionelle berechnen
-        erneuerbare = sum(
-            v.get("mwh", 0) or 0
-            for k, v in ergebnisse.items()
-            if k in ("wind_onshore", "wind_offshore", "photovoltaik", "biomasse", "wasserkraft")
-        )
-        konventionelle = sum(
-            v.get("mwh", 0) or 0
-            for k, v in ergebnisse.items()
-            if k in ("braunkohle", "steinkohle", "erdgas", "kernenergie")
-        )
-        gesamt = erneuerbare + konventionelle
+        # Report the newest observed interval. Never add a stale reading from
+        # another day or interpret an unavailable category as zero generation.
+        timestamp = max((ts for series in readings.values() for ts in series), default=None)
+        ergebnisse = {}
+        for name, series in readings.items():
+            value = series.get(timestamp)
+            ergebnisse[name] = {"mwh": value, "timestamp": timestamp}
+            if value is None:
+                ergebnisse[name]["error"] = errors.get(name, "Keine Daten für diesen Zeitraum verfügbar.")
 
-        return {
+        def total(names):
+            values = [ergebnisse[name]["mwh"] for name in names]
+            return sum(values) if all(value is not None for value in values) else None
+
+        erneuerbare = total(renewable)
+        konventionelle = total(conventional)
+        gesamt = total(renewable + conventional)
+        missing = [name for name, value in ergebnisse.items() if value["mwh"] is None]
+        result = {
+            "timestamp": timestamp,
+            "vollstaendig": not missing,
+            "fehlende_traeger": missing,
             "erzeugung_nach_traeger": ergebnisse,
             "erneuerbare_mwh": erneuerbare,
             "konventionelle_mwh": konventionelle,
             "gesamt_mwh": gesamt,
-            "erneuerbare_anteil_pct": round(erneuerbare / gesamt * 100, 1) if gesamt > 0 else 0,
+            "erneuerbare_anteil_pct": round(erneuerbare / gesamt * 100, 1) if gesamt is not None and gesamt > 0 else None,
         }
+        if missing:
+            result["error"] = "Stromerzeugungsdaten unvollständig; Gesamtsumme und Anteil nicht verfügbar."
+        return result
 
     @mcp.tool()
+    @safe_tool
     async def stromverbrauch() -> dict:
         """Aktueller Stromverbrauch in Deutschland.
 
@@ -98,7 +97,7 @@ def register_energie_tools(mcp: FastMCP):
                 "trend": _berechne_trend(recent),
             }
         except Exception as e:
-            return {"error": str(e)}
+            return {"error": safe_error(e)}
 
 
 def _berechne_trend(werte: list[dict]) -> str:

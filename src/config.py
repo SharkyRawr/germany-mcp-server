@@ -53,6 +53,8 @@ class Settings:
 
     # HTTP-Client Defaults
     http_timeout: float = 30.0
+    http_max_response_bytes: int = 16 * 1024 * 1024
+    law_index_cache_ttl: float = 3600.0
 
 
 # Globale Settings-Instanz

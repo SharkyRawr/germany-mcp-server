@@ -2,7 +2,10 @@
 
 from mcp.server.fastmcp import FastMCP
 
+from src.tools.errors import safe_tool
+
 from src.clients.autobahn import AutobahnClient
+from src.validation import road_name
 
 _autobahn = AutobahnClient()
 
@@ -14,6 +17,7 @@ def register_verkehr_tools(mcp: FastMCP):
     """Verkehr-bezogene MCP-Tools registrieren."""
 
     @mcp.tool()
+    @safe_tool
     async def autobahn_baustellen(autobahn: str = "A1") -> dict:
         """Aktuelle Baustellen auf einer deutschen Autobahn abrufen.
 
@@ -22,7 +26,7 @@ def register_verkehr_tools(mcp: FastMCP):
         Args:
             autobahn: Autobahn-Bezeichnung (z.B. "A1", "A7", "A61")
         """
-        road = autobahn.upper()
+        road = road_name(autobahn)
         roadworks = await _autobahn.get_roadworks(road)
 
         items = []
@@ -42,6 +46,7 @@ def register_verkehr_tools(mcp: FastMCP):
         }
 
     @mcp.tool()
+    @safe_tool
     async def autobahn_warnungen(autobahn: str = "A1") -> dict:
         """Aktuelle Verkehrswarnungen auf einer Autobahn.
 
@@ -50,7 +55,7 @@ def register_verkehr_tools(mcp: FastMCP):
         Args:
             autobahn: Autobahn-Bezeichnung (z.B. "A3", "A9")
         """
-        road = autobahn.upper()
+        road = road_name(autobahn)
         warnings = await _autobahn.get_warnings(road)
 
         items = []
@@ -69,13 +74,14 @@ def register_verkehr_tools(mcp: FastMCP):
         }
 
     @mcp.tool()
+    @safe_tool
     async def autobahn_sperrungen(autobahn: str = "A1") -> dict:
         """Aktuelle Sperrungen auf einer Autobahn.
 
         Args:
             autobahn: Autobahn-Bezeichnung (z.B. "A5", "A8")
         """
-        road = autobahn.upper()
+        road = road_name(autobahn)
         closures = await _autobahn.get_closures(road)
 
         items = []
@@ -93,13 +99,14 @@ def register_verkehr_tools(mcp: FastMCP):
         }
 
     @mcp.tool()
+    @safe_tool
     async def autobahn_ladestationen(autobahn: str = "A1") -> dict:
         """E-Auto-Ladestationen entlang einer Autobahn finden.
 
         Args:
             autobahn: Autobahn-Bezeichnung (z.B. "A2", "A7")
         """
-        road = autobahn.upper()
+        road = road_name(autobahn)
         stations = await _autobahn.get_charging_stations(road)
 
         items = []
