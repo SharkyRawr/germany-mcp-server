@@ -1,6 +1,6 @@
 """Warnungen-Tools — NINA Katastrophenwarnungen."""
 
-from mcp.server.fastmcp import FastMCP
+from mcp.server.mcpserver import MCPServer
 
 from src.tools.errors import safe_tool
 
@@ -9,7 +9,7 @@ from src.clients.nina import IncompleteWarningsError, NinaClient
 _nina = NinaClient()
 
 
-def register_warnungen_tools(mcp: FastMCP):
+def register_warnungen_tools(mcp: MCPServer):
     """Warnungs-bezogene MCP-Tools registrieren."""
 
     @mcp.tool()
@@ -38,15 +38,17 @@ def register_warnungen_tools(mcp: FastMCP):
                 headline = data_list.get("headline", "")
                 area = (data_list.get("area") or {}).get("description", "")
 
-            items.append({
-                "id": w.get("id", ""),
-                "titel": headline or (w.get("i18nTitle") or {}).get("de", ""),
-                "kanal": w.get("_channel", ""),
-                "typ": payload.get("type", ""),
-                "schweregrad": payload.get("severity", ""),
-                "gebiet": area,
-                "gesendet": payload.get("sent", ""),
-            })
+            items.append(
+                {
+                    "id": w.get("id", ""),
+                    "titel": headline or (w.get("i18nTitle") or {}).get("de", ""),
+                    "kanal": w.get("_channel", ""),
+                    "typ": payload.get("type", ""),
+                    "schweregrad": payload.get("severity", ""),
+                    "gebiet": area,
+                    "gesendet": payload.get("sent", ""),
+                }
+            )
 
         result = {
             "vollstaendig": not failed_channels,
@@ -55,5 +57,7 @@ def register_warnungen_tools(mcp: FastMCP):
             "warnungen": items,
         }
         if failed_channels:
-            result["error"] = "Warnungsdaten unvollständig; fehlende Meldungen bedeuten keine Entwarnung."
+            result["error"] = (
+                "Warnungsdaten unvollständig; fehlende Meldungen bedeuten keine Entwarnung."
+            )
         return result

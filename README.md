@@ -1,6 +1,6 @@
 # Germany MCP Server
 
-MCP-Server der AI-Agents Zugriff auf deutsche Behörden-Daten gibt — 16 Tools in 10 Kategorien, alles kostenlos und ohne API-Key nutzbar.
+MCP-Server der AI-Agents Zugriff auf deutsche Behörden-Daten gibt — 16 Tools in 10 Kategorien, kostenlos nutzbar. Bundestag DIP benötigt einen API-Key.
 
 [![germany-mcp-server MCP server](https://glama.ai/mcp/servers/AiAgentKarl/germany-mcp-server/badges/card.svg)](https://glama.ai/mcp/servers/AiAgentKarl/germany-mcp-server)
 
@@ -27,7 +27,7 @@ MCP-Server der AI-Agents Zugriff auf deutsche Behörden-Daten gibt — 16 Tools 
 - `stromverbrauch` — Aktueller Stromverbrauch und Trend
 
 ### Energiepreise (NEU in v0.2.0)
-- `get_energy_prices` — Aktuelle Strom- und Gaspreise (Day-Ahead-Börsenpreis, Gasimportpreis). 14-Tage-Verlauf mit Trend.
+- `get_energy_prices` — Deutsche Day-Ahead-Strompreise. 14-Tage-Verlauf mit Trend. Gaspreise sind derzeit nicht verfügbar.
 
 ### Politik (Bundestag)
 - `bundestag_suche` — Gesetzentwürfe und Vorgänge durchsuchen
@@ -43,6 +43,8 @@ MCP-Server der AI-Agents Zugriff auf deutsche Behörden-Daten gibt — 16 Tools 
 - `search_german_laws` — 6000+ Bundesgesetze durchsuchen (Titel, Abkürzung). Direkt-Links zu gesetze-im-internet.de.
 
 ## Installation
+
+Benötigt Python 3.11+ und das MCP Python SDK 2.x (wird automatisch installiert).
 
 ```bash
 pip install germany-mcp-server
@@ -99,7 +101,7 @@ Alternativ mit `uvx` (kein lokales Install nötig):
 
 ## Datenquellen
 
-Alle APIs sind **kostenlos und ohne API-Key** nutzbar (Bundestag optional mit Key):
+Alle APIs sind **kostenlos** nutzbar. Nur Bundestag DIP benötigt einen API-Key:
 
 | API | Quelle | Daten |
 |-----|--------|-------|
@@ -113,14 +115,22 @@ Alle APIs sind **kostenlos und ohne API-Key** nutzbar (Bundestag optional mit Ke
 | Eurostat/Destatis | ec.europa.eu/eurostat | BIP, Bevölkerung, Inflation, Arbeitsmarkt |
 | Gesetze-im-Internet | gesetze-im-internet.de | 6000+ Bundesgesetze und Verordnungen |
 
-## Optionale API-Keys
+## Bundestag API-Key
+
+Für `bundestag_suche` und `bundestag_aktivitaeten` muss `BUNDESTAG_API_KEY` in der Umgebung des Serverprozesses gesetzt sein. Ohne Key geben diese Tools einen Konfigurationsfehler zurück; alle anderen Tools bleiben nutzbar.
 
 ```bash
 # Bundestag DIP API (kostenlos registrierbar bei dip.bundestag.de)
-BUNDESTAG_API_KEY=dein-key-hier
+export BUNDESTAG_API_KEY=dein-key-hier
 ```
 
 ## Changelog
+
+### Unveröffentlicht
+- Migration auf MCP Python SDK 2.x.
+- Wetterwarnungen lesen die lokalisierten Bright-Sky-Felder (Deutsch, ersatzweise Englisch).
+- Gaspreisabfragen geben einen Fehler zurück: Die bisherige SMARD-Reihe 4996 enthält belgische Strompreise, keine Gaspreise.
+- Bundestag DIP erfordert einen API-Key; fehlende oder abgelehnte Zugangsdaten liefern klare Fehler.
 
 ### v0.2.0 (April 2026)
 - 4 neue Tools: `get_destatis_data`, `search_german_laws`, `get_german_weather_warnings`, `get_energy_prices`
@@ -143,6 +153,14 @@ BUNDESTAG_API_KEY=dein-key-hier
 Die Grenzwerte und die Cache-Dauer stehen in `src/config.py`.
 
 ## Tests
+
+Git-Hook einmal pro Checkout aktivieren (systemweit installiertes `black` muss im `PATH` liegen):
+
+```bash
+./scripts/setup-hooks.sh
+```
+
+Der Pre-Commit-Hook formatiert Python-Dateien mit `black .`. Bei ungestagten Python-Änderungen bricht er ab: Änderungen prüfen, mit `git add` stagen und erneut committen. Der Hook staged keine Dateien automatisch.
 
 Nach der Installation lassen sich die Regressionstests ohne externe API-Aufrufe ausführen:
 

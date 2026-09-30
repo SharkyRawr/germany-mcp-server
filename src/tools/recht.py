@@ -1,6 +1,6 @@
 """Recht-Tools — Deutsche Bundesgesetze durchsuchen."""
 
-from mcp.server.fastmcp import FastMCP
+from mcp.server.mcpserver import MCPServer
 
 from src.tools.errors import safe_error, safe_tool
 
@@ -9,7 +9,7 @@ from src.clients.gesetze import GesetzeClient
 _gesetze = GesetzeClient()
 
 
-def register_recht_tools(mcp: FastMCP):
+def register_recht_tools(mcp: MCPServer):
     """Rechts-bezogene MCP-Tools registrieren."""
 
     @mcp.tool()
@@ -40,11 +40,13 @@ def register_recht_tools(mcp: FastMCP):
 
             items = []
             for t in treffer:
-                items.append({
-                    "titel": t["titel"],
-                    "abkuerzung": t["abkuerzung"],
-                    "url": t["url"],
-                })
+                items.append(
+                    {
+                        "titel": t["titel"],
+                        "abkuerzung": t["abkuerzung"],
+                        "url": t["url"],
+                    }
+                )
 
             return {
                 "suchbegriff": query,

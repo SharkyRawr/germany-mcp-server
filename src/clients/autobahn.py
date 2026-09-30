@@ -22,19 +22,25 @@ class AutobahnClient:
 
     async def get_roadworks(self, road: str) -> list[dict]:
         """Aktuelle Baustellen auf einer Autobahn."""
-        resp = await bounded_get(self._client, f"{self._base}/{road_name(road)}/services/roadworks")
+        resp = await bounded_get(
+            self._client, f"{self._base}/{road_name(road)}/services/roadworks"
+        )
         resp.raise_for_status()
         return resp.json().get("roadworks", [])
 
     async def get_warnings(self, road: str) -> list[dict]:
         """Aktuelle Verkehrsmeldungen/Warnungen auf einer Autobahn."""
-        resp = await bounded_get(self._client, f"{self._base}/{road_name(road)}/services/warning")
+        resp = await bounded_get(
+            self._client, f"{self._base}/{road_name(road)}/services/warning"
+        )
         resp.raise_for_status()
         return resp.json().get("warning", [])
 
     async def get_closures(self, road: str) -> list[dict]:
         """Aktuelle Sperrungen auf einer Autobahn."""
-        resp = await bounded_get(self._client, f"{self._base}/{road_name(road)}/services/closure")
+        resp = await bounded_get(
+            self._client, f"{self._base}/{road_name(road)}/services/closure"
+        )
         resp.raise_for_status()
         return resp.json().get("closure", [])
 
@@ -42,14 +48,16 @@ class AutobahnClient:
         """Ladestationen für E-Autos entlang einer Autobahn."""
         resp = await bounded_get(
             self._client,
-            f"{self._base}/{road_name(road)}/services/electric_charging_station"
+            f"{self._base}/{road_name(road)}/services/electric_charging_station",
         )
         resp.raise_for_status()
         return resp.json().get("electric_charging_station", [])
 
     async def get_webcams(self, road: str) -> list[dict]:
         """Webcams entlang einer Autobahn."""
-        resp = await bounded_get(self._client, f"{self._base}/{road_name(road)}/services/webcam")
+        resp = await bounded_get(
+            self._client, f"{self._base}/{road_name(road)}/services/webcam"
+        )
         resp.raise_for_status()
         return resp.json().get("webcam", [])
 

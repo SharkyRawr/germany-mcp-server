@@ -1,6 +1,6 @@
 """Energie-Tools — SMARD Energiemarktdaten (Bundesnetzagentur)."""
 
-from mcp.server.fastmcp import FastMCP
+from mcp.server.mcpserver import MCPServer
 
 from src.tools.errors import safe_error, safe_tool
 
@@ -9,7 +9,7 @@ from src.clients.smard import SmardClient, SMARD_FILTERS
 _smard = SmardClient()
 
 
-def register_energie_tools(mcp: FastMCP):
+def register_energie_tools(mcp: MCPServer):
     """Energie-bezogene MCP-Tools registrieren."""
 
     @mcp.tool()
@@ -21,32 +21,48 @@ def register_energie_tools(mcp: FastMCP):
         Wind, Solar, Kohle, Gas etc. Daten der Bundesnetzagentur (SMARD).
         """
         renewable = (
-            "wind_onshore", "wind_offshore", "photovoltaik", "biomasse",
-            "wasserkraft", "sonstige_erneuerbare",
+            "wind_onshore",
+            "wind_offshore",
+            "photovoltaik",
+            "biomasse",
+            "wasserkraft",
+            "sonstige_erneuerbare",
         )
         conventional = (
-            "braunkohle", "steinkohle", "erdgas", "kernenergie",
-            "pumpspeicher", "sonstige_konventionelle",
+            "braunkohle",
+            "steinkohle",
+            "erdgas",
+            "kernenergie",
+            "pumpspeicher",
+            "sonstige_konventionelle",
         )
         readings = {}
         errors = {}
         for name in renewable + conventional:
             try:
-                data = await _smard.get_chart_data(SMARD_FILTERS[name], resolution="day")
-                readings[name] = {ts: val for ts, val in data.get("series", []) if val is not None}
+                data = await _smard.get_chart_data(
+                    SMARD_FILTERS[name], resolution="day"
+                )
+                readings[name] = {
+                    ts: val for ts, val in data.get("series", []) if val is not None
+                }
             except Exception as exc:
                 readings[name] = {}
                 errors[name] = safe_error(exc)
 
         # Report the newest observed interval. Never add a stale reading from
         # another day or interpret an unavailable category as zero generation.
-        timestamp = max((ts for series in readings.values() for ts in series), default=None)
+        timestamp = max(
+            (ts for series in readings.values() for ts in series), default=None
+        )
         ergebnisse = {}
         for name, series in readings.items():
             value = series.get(timestamp)
             ergebnisse[name] = {"mwh": value, "timestamp": timestamp}
             if value is None:
-                ergebnisse[name]["error"] = errors.get(name, "Keine Daten für diesen Zeitraum verfügbar.")
+                ergebnisse[name]["error"] = errors.get(
+                    name, "Keine Daten für diesen Zeitraum verfügbar."
+                )
 
         def total(names):
             values = [ergebnisse[name]["mwh"] for name in names]
@@ -64,10 +80,16 @@ def register_energie_tools(mcp: FastMCP):
             "erneuerbare_mwh": erneuerbare,
             "konventionelle_mwh": konventionelle,
             "gesamt_mwh": gesamt,
-            "erneuerbare_anteil_pct": round(erneuerbare / gesamt * 100, 1) if gesamt is not None and gesamt > 0 else None,
+            "erneuerbare_anteil_pct": (
+                round(erneuerbare / gesamt * 100, 1)
+                if gesamt is not None and gesamt > 0
+                else None
+            ),
         }
         if missing:
-            result["error"] = "Stromerzeugungsdaten unvollständig; Gesamtsumme und Anteil nicht verfügbar."
+            result["error"] = (
+                "Stromerzeugungsdaten unvollständig; Gesamtsumme und Anteil nicht verfügbar."
+            )
         return result
 
     @mcp.tool()

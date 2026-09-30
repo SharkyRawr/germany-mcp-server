@@ -1,6 +1,6 @@
 """Gesundheit-Tools — Pollenflug-Vorhersage."""
 
-from mcp.server.fastmcp import FastMCP
+from mcp.server.mcpserver import MCPServer
 
 from src.tools.errors import safe_tool
 
@@ -28,7 +28,7 @@ REGIONEN = {
 }
 
 
-def register_gesundheit_tools(mcp: FastMCP):
+def register_gesundheit_tools(mcp: MCPServer):
     """Gesundheits-bezogene MCP-Tools registrieren."""
 
     @mcp.tool()
@@ -48,9 +48,12 @@ def register_gesundheit_tools(mcp: FastMCP):
 
         # Region filtern wenn angegeben
         if region:
-            region_lower = BUNDESLAENDER.get(region.strip().upper(), region.strip()).lower()
+            region_lower = BUNDESLAENDER.get(
+                region.strip().upper(), region.strip()
+            ).lower()
             content = [
-                r for r in content
+                r
+                for r in content
                 if region_lower in (r.get("region_name", "") or "").lower()
                 or region_lower in (r.get("partregion_name", "") or "").lower()
             ]
@@ -71,10 +74,12 @@ def register_gesundheit_tools(mcp: FastMCP):
                     "uebermorgen": POLLEN_LEVELS.get(str(uebermorgen), "unbekannt"),
                 }
 
-            items.append({
-                "region": region_name,
-                "pollen": pollen_daten,
-            })
+            items.append(
+                {
+                    "region": region_name,
+                    "pollen": pollen_daten,
+                }
+            )
 
         aktualisiert = data.get("last_update", "")
 

@@ -64,12 +64,18 @@ class GesetzeClient:
                     if len(parts) >= 2:
                         abkuerzung = parts[-2]
 
-                gesetze.append({
-                    "titel": title_el.text.strip(),
-                    "abkuerzung": abkuerzung,
-                    "link": link,
-                    "url": f"https://www.gesetze-im-internet.de/{abkuerzung}/" if abkuerzung else "",
-                })
+                gesetze.append(
+                    {
+                        "titel": title_el.text.strip(),
+                        "abkuerzung": abkuerzung,
+                        "link": link,
+                        "url": (
+                            f"https://www.gesetze-im-internet.de/{abkuerzung}/"
+                            if abkuerzung
+                            else ""
+                        ),
+                    }
+                )
 
         return gesetze
 

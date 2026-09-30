@@ -1,6 +1,6 @@
-"""Energiepreise-Tools — Deutsche Strom- und Gaspreise via SMARD."""
+"""Energiepreise-Tools — Deutsche Strompreise via SMARD."""
 
-from mcp.server.fastmcp import FastMCP
+from mcp.server.mcpserver import MCPServer
 
 from src.tools.errors import safe_error, safe_tool
 
@@ -20,15 +20,10 @@ PREIS_FILTER = {
         "label": "Day-Ahead-Strompreis (Boerse)",
         "einheit": "EUR/MWh",
     },
-    "gas": {
-        "filter_id": 4996,
-        "label": "Gasimportpreis (BAFA)",
-        "einheit": "EUR/MWh",
-    },
 }
 
 
-def register_energiepreise_tools(mcp: FastMCP):
+def register_energiepreise_tools(mcp: MCPServer):
     """Energiepreis-Tools registrieren."""
 
     @mcp.tool()
@@ -36,25 +31,29 @@ def register_energiepreise_tools(mcp: FastMCP):
     async def get_energy_prices(
         type: str = "electricity",
     ) -> dict:
-        """Aktuelle deutsche Energiepreise (Strom, Gas) abrufen.
+        """Aktuelle deutsche Strompreise abrufen.
 
         Zeigt Boersenpreise fuer Strom (Day-Ahead, EPEX Spot)
-        und Gasimportpreise (BAFA). Daten der Bundesnetzagentur (SMARD).
+        aus Daten der Bundesnetzagentur (SMARD). Gaspreise sind nicht verfügbar.
         Zeitraum: heute und die 13 vorherigen Kalendertage (Europe/Berlin).
         Bei Datenlücken werden Kennzahlen nur aus verfügbaren Tagen berechnet.
 
         Args:
             type: Art des Energietraegers.
                 - "electricity" oder "strom" — Boersenstrompreis
-                - "gas" — Gasimportpreis
         """
         type_lower = type.lower().strip()
+        if type_lower == "gas":
+            return {
+                "error": "Gaspreise sind nicht verfügbar: Es ist keine verifizierte Gaspreisquelle angebunden.",
+                "verfuegbare_typen": list(PREIS_FILTER),
+            }
         config = PREIS_FILTER.get(type_lower)
 
         if not config:
             return {
                 "error": f"Unbekannter Typ: {type}",
-                "verfuegbare_typen": ["electricity", "strom", "gas"],
+                "verfuegbare_typen": list(PREIS_FILTER),
             }
 
         try:
@@ -97,7 +96,9 @@ def register_energiepreise_tools(mcp: FastMCP):
                 "quelle": "SMARD / Bundesnetzagentur",
             }
             if not data["vollstaendig"]:
-                result["hinweis"] = "Daten im 14-Tage-Zeitraum unvollständig; Statistik nutzt nur verfügbare Tage."
+                result["hinweis"] = (
+                    "Daten im 14-Tage-Zeitraum unvollständig; Statistik nutzt nur verfügbare Tage."
+                )
             if not werte:
                 result["error"] = "Keine Preisdaten im angefragten Zeitraum verfügbar."
             return result

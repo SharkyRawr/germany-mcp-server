@@ -1,6 +1,6 @@
 """Statistik-Tools — Offizielle deutsche Statistikdaten (Destatis via Eurostat)."""
 
-from mcp.server.fastmcp import FastMCP
+from mcp.server.mcpserver import MCPServer
 
 from src.tools.errors import safe_error, safe_tool
 
@@ -9,7 +9,7 @@ from src.clients.destatis import DestatisClient, INDICATORS
 _destatis = DestatisClient()
 
 
-def register_statistik_tools(mcp: FastMCP):
+def register_statistik_tools(mcp: MCPServer):
     """Statistik-bezogene MCP-Tools registrieren."""
 
     @mcp.tool()

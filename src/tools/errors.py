@@ -6,6 +6,7 @@ from functools import wraps
 import httpx
 
 from src.clients.http import ResponseTooLarge
+from src.clients.bundestag import MissingBundestagApiKey
 
 _logger = logging.getLogger(__name__)
 
@@ -13,24 +14,33 @@ _logger = logging.getLogger(__name__)
 def safe_error(exc: Exception) -> str:
     # Log only the exception class; exception text and tracebacks may contain
     # credentials, request parameters, or internal paths.
-    _logger.warning('Tool request failed (%s)', type(exc).__name__)
+    _logger.warning("Tool request failed (%s)", type(exc).__name__)
+    if isinstance(exc, MissingBundestagApiKey):
+        return "Bundestag DIP benötigt einen API-Key. Bitte BUNDESTAG_API_KEY setzen."
+    if isinstance(exc, httpx.HTTPStatusError) and exc.response.status_code in (
+        401,
+        403,
+    ):
+        return "Die Datenquelle verweigert den Zugriff. Bitte API-Key und Berechtigungen prüfen."
     if isinstance(exc, ResponseTooLarge):
-        return 'Die Datenquelle hat eine zu große Antwort geliefert.'
+        return "Die Datenquelle hat eine zu große Antwort geliefert."
     if isinstance(exc, (TimeoutError, httpx.TimeoutException)):
-        return 'Zeitüberschreitung beim Abrufen der Datenquelle.'
+        return "Zeitüberschreitung beim Abrufen der Datenquelle."
     if isinstance(exc, httpx.HTTPError):
-        return 'Die Datenquelle ist derzeit nicht verfügbar.'
+        return "Die Datenquelle ist derzeit nicht verfügbar."
     if isinstance(exc, ValueError):
-        return 'Ungültige Eingabe oder ungültiges Datenformat der Datenquelle.'
-    return 'Die Anfrage konnte nicht verarbeitet werden.'
+        return "Ungültige Eingabe oder ungültiges Datenformat der Datenquelle."
+    return "Die Anfrage konnte nicht verarbeitet werden."
 
 
 def safe_tool(function):
-    """Protect tools that otherwise let FastMCP echo raw exceptions."""
+    """Protect tools that otherwise let MCPServer echo raw exceptions."""
+
     @wraps(function)
     async def wrapped(*args, **kwargs):
         try:
             return await function(*args, **kwargs)
         except Exception as exc:
-            return {'error': safe_error(exc)}
+            return {"error": safe_error(exc)}
+
     return wrapped

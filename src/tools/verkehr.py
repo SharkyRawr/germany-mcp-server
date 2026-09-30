@@ -1,6 +1,6 @@
 """Verkehr-Tools — Autobahn-Daten (Staus, Baustellen, Sperrungen)."""
 
-from mcp.server.fastmcp import FastMCP
+from mcp.server.mcpserver import MCPServer
 
 from src.tools.errors import safe_tool
 
@@ -13,7 +13,7 @@ _autobahn = AutobahnClient()
 MAJOR_AUTOBAHNS = ["A1", "A2", "A3", "A4", "A5", "A6", "A7", "A8", "A9", "A10"]
 
 
-def register_verkehr_tools(mcp: FastMCP):
+def register_verkehr_tools(mcp: MCPServer):
     """Verkehr-bezogene MCP-Tools registrieren."""
 
     @mcp.tool()
@@ -31,13 +31,15 @@ def register_verkehr_tools(mcp: FastMCP):
 
         items = []
         for rw in roadworks[:20]:
-            items.append({
-                "titel": rw.get("title", ""),
-                "beschreibung": rw.get("subtitle", ""),
-                "auswirkung": rw.get("display_type", ""),
-                "ort": rw.get("point", ""),
-                "startzeit": rw.get("startTimestamp", ""),
-            })
+            items.append(
+                {
+                    "titel": rw.get("title", ""),
+                    "beschreibung": rw.get("subtitle", ""),
+                    "auswirkung": rw.get("display_type", ""),
+                    "ort": rw.get("point", ""),
+                    "startzeit": rw.get("startTimestamp", ""),
+                }
+            )
 
         return {
             "autobahn": road,
@@ -60,12 +62,14 @@ def register_verkehr_tools(mcp: FastMCP):
 
         items = []
         for w in warnings[:20]:
-            items.append({
-                "titel": w.get("title", ""),
-                "beschreibung": w.get("subtitle", ""),
-                "typ": w.get("display_type", ""),
-                "ort": w.get("point", ""),
-            })
+            items.append(
+                {
+                    "titel": w.get("title", ""),
+                    "beschreibung": w.get("subtitle", ""),
+                    "typ": w.get("display_type", ""),
+                    "ort": w.get("point", ""),
+                }
+            )
 
         return {
             "autobahn": road,
@@ -86,11 +90,13 @@ def register_verkehr_tools(mcp: FastMCP):
 
         items = []
         for c in closures[:20]:
-            items.append({
-                "titel": c.get("title", ""),
-                "beschreibung": c.get("subtitle", ""),
-                "ort": c.get("point", ""),
-            })
+            items.append(
+                {
+                    "titel": c.get("title", ""),
+                    "beschreibung": c.get("subtitle", ""),
+                    "ort": c.get("point", ""),
+                }
+            )
 
         return {
             "autobahn": road,
@@ -111,11 +117,13 @@ def register_verkehr_tools(mcp: FastMCP):
 
         items = []
         for s in stations[:30]:
-            items.append({
-                "titel": s.get("title", ""),
-                "beschreibung": s.get("subtitle", ""),
-                "ort": s.get("point", ""),
-            })
+            items.append(
+                {
+                    "titel": s.get("title", ""),
+                    "beschreibung": s.get("subtitle", ""),
+                    "ort": s.get("point", ""),
+                }
+            )
 
         return {
             "autobahn": road,

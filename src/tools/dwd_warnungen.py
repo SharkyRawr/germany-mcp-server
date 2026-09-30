@@ -2,7 +2,7 @@
 
 import json
 
-from mcp.server.fastmcp import FastMCP
+from mcp.server.mcpserver import MCPServer
 
 from src.tools.errors import safe_error, safe_tool
 
@@ -11,7 +11,7 @@ from src.clients.dwd_warnings import DwdWarningsClient, WARN_LEVELS
 _dwd = DwdWarningsClient()
 
 
-def register_dwd_warnungen_tools(mcp: FastMCP):
+def register_dwd_warnungen_tools(mcp: MCPServer):
     """DWD-Warnungs-Tools registrieren."""
 
     @mcp.tool()
@@ -43,20 +43,22 @@ def register_dwd_warnungen_tools(mcp: FastMCP):
                 seen.add(key)
 
                 level = w.get("level", 0)
-                items.append({
-                    "ueberschrift": w.get("headline", ""),
-                    "ereignis": w.get("event", ""),
-                    "beschreibung": w.get("description", ""),
-                    "schweregrad": WARN_LEVELS.get(level, f"Stufe {level}"),
-                    "level": level,
-                    "region": w.get("regionName", ""),
-                    "bundesland": w.get("state", ""),
-                    "beginn": w.get("start"),
-                    "ende": w.get("end"),
-                    "handlungsempfehlung": w.get("instruction", ""),
-                    "hoehe_ab_m": w.get("altitudeStart"),
-                    "vorab_info": w.get("_vorab", False),
-                })
+                items.append(
+                    {
+                        "ueberschrift": w.get("headline", ""),
+                        "ereignis": w.get("event", ""),
+                        "beschreibung": w.get("description", ""),
+                        "schweregrad": WARN_LEVELS.get(level, f"Stufe {level}"),
+                        "level": level,
+                        "region": w.get("regionName", ""),
+                        "bundesland": w.get("state", ""),
+                        "beginn": w.get("start"),
+                        "ende": w.get("end"),
+                        "handlungsempfehlung": w.get("instruction", ""),
+                        "hoehe_ab_m": w.get("altitudeStart"),
+                        "vorab_info": w.get("_vorab", False),
+                    }
+                )
 
             # Nach Schweregrad sortieren (schlimmste zuerst)
             items.sort(key=lambda x: x.get("level", 0), reverse=True)

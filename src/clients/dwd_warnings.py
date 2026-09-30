@@ -12,7 +12,6 @@ import httpx
 from src.config import settings
 from src.clients.http import bounded_get
 
-
 # Schweregrad-Mapping
 WARN_LEVELS = {
     1: "Wetterwarnung (gelb)",
@@ -66,7 +65,7 @@ class DwdWarningsClient:
         # JSONP-Wrapper entfernen: warnWetter.loadWarnings({...})
         text = resp.text.strip()
         if text.startswith("warnWetter.loadWarnings("):
-            text = text[len("warnWetter.loadWarnings("):]
+            text = text[len("warnWetter.loadWarnings(") :]
             if text.endswith(")"):
                 text = text[:-1]
             elif text.endswith(");"):

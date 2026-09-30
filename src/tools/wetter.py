@@ -1,6 +1,6 @@
 """Wetter-Tools — DWD-Wetterdaten und Warnungen über Bright Sky."""
 
-from mcp.server.fastmcp import FastMCP
+from mcp.server.mcpserver import MCPServer
 
 from src.tools.errors import safe_tool
 
@@ -61,7 +61,7 @@ def _resolve_coords(ort: str, lat: float | None, lon: float | None):
     )
 
 
-def register_wetter_tools(mcp: FastMCP):
+def register_wetter_tools(mcp: MCPServer):
     """Wetter-bezogene MCP-Tools registrieren."""
 
     @mcp.tool()
@@ -86,7 +86,9 @@ def register_wetter_tools(mcp: FastMCP):
 
         weather = data.get("weather", {})
         sources = data.get("sources", [{}])
-        station = sources[0].get("station_name", "unbekannt") if sources else "unbekannt"
+        station = (
+            sources[0].get("station_name", "unbekannt") if sources else "unbekannt"
+        )
 
         return {
             "ort": ort or f"{resolved_lat},{resolved_lon}",
@@ -129,17 +131,26 @@ def register_wetter_tools(mcp: FastMCP):
 
         items = []
         for a in alerts[:20]:
-            items.append({
-                "titel": a.get("headline", ""),
-                "beschreibung": a.get("description", ""),
-                "schweregrad": a.get("severity", ""),
-                "typ": a.get("event", ""),
-                "beginn": a.get("onset", ""),
-                "ende": a.get("expires", ""),
-            })
+            items.append(
+                {
+                    "titel": a.get("headline_de") or a.get("headline_en") or "",
+                    "beschreibung": a.get("description_de")
+                    or a.get("description_en")
+                    or "",
+                    "schweregrad": a.get("severity", ""),
+                    "typ": a.get("event_de") or a.get("event_en") or "",
+                    "beginn": a.get("onset", ""),
+                    "ende": a.get("expires", ""),
+                }
+            )
 
         return {
-            "ort": ort or (f"{resolved_lat},{resolved_lon}" if resolved_lat is not None else "bundesweit"),
+            "ort": ort
+            or (
+                f"{resolved_lat},{resolved_lon}"
+                if resolved_lat is not None
+                else "bundesweit"
+            ),
             "anzahl_warnungen": len(alerts),
             "warnungen": items,
         }

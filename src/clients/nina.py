@@ -36,12 +36,13 @@ class NinaClient:
         for channel in ("mowas", "katwarn", "biwapp", "dwd", "lhp"):
             try:
                 resp = await bounded_get(
-                    self._client,
-                    f"{self._base}/{channel}/mapData.json"
+                    self._client, f"{self._base}/{channel}/mapData.json"
                 )
                 resp.raise_for_status()
                 data = resp.json()
-                if not isinstance(data, list) or not all(isinstance(w, dict) for w in data):
+                if not isinstance(data, list) or not all(
+                    isinstance(w, dict) for w in data
+                ):
                     raise ValueError("Ungültiges Warnungsformat")
                 all_warnings.extend({**w, "_channel": channel} for w in data)
             except (httpx.HTTPError, ValueError, TimeoutError):
@@ -55,8 +56,7 @@ class NinaClient:
         if not re.fullmatch(r"[A-Za-z0-9_-]{1,200}", warning_id):
             raise ValueError("Ungültige Warnungs-ID.")
         resp = await bounded_get(
-            self._client,
-            f"{self._base}/warnings/{warning_id}.json"
+            self._client, f"{self._base}/warnings/{warning_id}.json"
         )
         resp.raise_for_status()
         return resp.json()
@@ -68,12 +68,11 @@ class NinaClient:
         Die ersten 5 Stellen reichen oft (Kreis-Ebene).
         """
         if not re.fullmatch(r"[0-9]{5}(?:[0-9]{7})?", ags):
-            raise ValueError("Kreisschlüssel muss aus 5 oder Regionalschlüssel aus 12 Ziffern bestehen.")
+            raise ValueError(
+                "Kreisschlüssel muss aus 5 oder Regionalschlüssel aus 12 Ziffern bestehen."
+            )
         ags = ags.ljust(12, "0")
-        resp = await bounded_get(
-            self._client,
-            f"{self._base}/dashboard/{ags}.json"
-        )
+        resp = await bounded_get(self._client, f"{self._base}/dashboard/{ags}.json")
         resp.raise_for_status()
         return resp.json()
 

@@ -5,11 +5,16 @@ import httpx
 from src.config import settings
 from src.clients.http import bounded_get
 
-
 # Pollenarten im DWD-Datensatz
 POLLEN_TYPES = [
-    "Ambrosia", "Beifuss", "Birke", "Erle", "Esche",
-    "Graeser", "Hasel", "Roggen",
+    "Ambrosia",
+    "Beifuss",
+    "Birke",
+    "Erle",
+    "Esche",
+    "Graeser",
+    "Hasel",
+    "Roggen",
 ]
 
 # Belastungsstufen

@@ -1,6 +1,6 @@
 """Politik-Tools — Bundestag-Daten (Drucksachen, Vorgänge, Aktivitäten)."""
 
-from mcp.server.fastmcp import FastMCP
+from mcp.server.mcpserver import MCPServer
 
 from src.tools.errors import safe_error, safe_tool
 
@@ -9,7 +9,7 @@ from src.clients.bundestag import BundestagClient
 _bundestag = BundestagClient()
 
 
-def register_politik_tools(mcp: FastMCP):
+def register_politik_tools(mcp: MCPServer):
     """Politik-bezogene MCP-Tools registrieren."""
 
     @mcp.tool()
@@ -28,18 +28,22 @@ def register_politik_tools(mcp: FastMCP):
         """
         # Vorgänge durchsuchen
         try:
-            vorgaenge = await _bundestag.search_vorgaenge(suchbegriff, wahlperiode, limit=15)
+            vorgaenge = await _bundestag.search_vorgaenge(
+                suchbegriff, wahlperiode, limit=15
+            )
             docs = vorgaenge.get("documents", [])
 
             items = []
             for v in docs[:15]:
-                items.append({
-                    "titel": v.get("titel", ""),
-                    "typ": v.get("vorgangstyp", ""),
-                    "initiative": v.get("initiative", []),
-                    "datum": v.get("datum", ""),
-                    "abstract": (v.get("abstract", "") or "")[:300],
-                })
+                items.append(
+                    {
+                        "titel": v.get("titel", ""),
+                        "typ": v.get("vorgangstyp", ""),
+                        "initiative": v.get("initiative", []),
+                        "datum": v.get("datum", ""),
+                        "abstract": (v.get("abstract", "") or "")[:300],
+                    }
+                )
 
             return {
                 "suchbegriff": suchbegriff,
@@ -48,7 +52,7 @@ def register_politik_tools(mcp: FastMCP):
                 "vorgaenge": items,
             }
         except Exception as e:
-            return {"error": safe_error(e), "hinweis": "Bundestag DIP API ggf. nicht erreichbar"}
+            return {"error": safe_error(e)}
 
     @mcp.tool()
     @safe_tool
@@ -63,12 +67,14 @@ def register_politik_tools(mcp: FastMCP):
 
             items = []
             for a in docs[:15]:
-                items.append({
-                    "titel": a.get("titel", ""),
-                    "typ": a.get("aktivitaetsart", ""),
-                    "datum": a.get("datum", ""),
-                    "fundstelle": (a.get("fundstelle") or {}).get("pdf_url", ""),
-                })
+                items.append(
+                    {
+                        "titel": a.get("titel", ""),
+                        "typ": a.get("aktivitaetsart", ""),
+                        "datum": a.get("datum", ""),
+                        "fundstelle": (a.get("fundstelle") or {}).get("pdf_url", ""),
+                    }
+                )
 
             return {
                 "anzahl": len(items),

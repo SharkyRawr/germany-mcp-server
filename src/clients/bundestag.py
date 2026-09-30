@@ -6,11 +6,14 @@ from src.config import settings
 from src.clients.http import bounded_get
 
 
+class MissingBundestagApiKey(ValueError):
+    """Bundestag requests require a configured API key."""
+
+
 class BundestagClient:
     """Async-Client für die Bundestag DIP API.
 
-    Braucht optional einen API-Key (kostenlos registrierbar).
-    Ohne Key: eingeschränktes Rate-Limit.
+    Braucht einen API-Key (kostenlos registrierbar).
     """
 
     def __init__(self):
@@ -18,12 +21,11 @@ class BundestagClient:
         self._base = settings.bundestag_base_url
 
     def _headers(self) -> dict:
-        """Request-Headers mit optionalem API-Key."""
-        headers = {"Accept": "application/json"}
-        key = settings.bundestag_api_key
-        if key:
-            headers["Authorization"] = f"ApiKey {key}"
-        return headers
+        """Request-Headers mit erforderlichem API-Key."""
+        key = settings.bundestag_api_key.strip()
+        if not key:
+            raise MissingBundestagApiKey()
+        return {"Accept": "application/json", "Authorization": f"ApiKey {key}"}
 
     async def search_drucksachen(
         self, query: str, wahlperiode: int = 21, limit: int = 10
@@ -35,7 +37,11 @@ class BundestagClient:
             wahlperiode: Wahlperiode (21 = aktuell)
             limit: Max. Ergebnisse
         """
-        if isinstance(limit, bool) or not isinstance(limit, int) or not 1 <= limit <= 100:
+        if (
+            isinstance(limit, bool)
+            or not isinstance(limit, int)
+            or not 1 <= limit <= 100
+        ):
             raise ValueError("limit muss zwischen 1 und 100 liegen.")
         resp = await bounded_get(
             self._client,
@@ -63,7 +69,11 @@ class BundestagClient:
         }
         if query:
             params["f.titel"] = query
-        if isinstance(limit, bool) or not isinstance(limit, int) or not 1 <= limit <= 100:
+        if (
+            isinstance(limit, bool)
+            or not isinstance(limit, int)
+            or not 1 <= limit <= 100
+        ):
             raise ValueError("limit muss zwischen 1 und 100 liegen.")
         resp = await bounded_get(
             self._client,
@@ -77,7 +87,11 @@ class BundestagClient:
 
     async def get_aktivitaeten(self, limit: int = 10) -> dict:
         """Letzte parlamentarische Aktivitäten."""
-        if isinstance(limit, bool) or not isinstance(limit, int) or not 1 <= limit <= 100:
+        if (
+            isinstance(limit, bool)
+            or not isinstance(limit, int)
+            or not 1 <= limit <= 100
+        ):
             raise ValueError("limit muss zwischen 1 und 100 liegen.")
         resp = await bounded_get(
             self._client,

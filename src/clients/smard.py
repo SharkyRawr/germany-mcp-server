@@ -9,7 +9,6 @@ import httpx
 from src.config import settings
 from src.clients.http import bounded_get
 
-
 # SMARD Filter-IDs für verschiedene Datenreihen
 SMARD_FILTERS = {
     # Stromerzeugung
@@ -71,7 +70,7 @@ class SmardClient:
         if timestamp is None:
             ts_resp = await bounded_get(
                 self._client,
-                f"{self._base}/{filter_id}/{region}/index_{resolution}.json"
+                f"{self._base}/{filter_id}/{region}/index_{resolution}.json",
             )
             ts_resp.raise_for_status()
             timestamps = ts_resp.json().get("timestamps", [])
@@ -81,7 +80,7 @@ class SmardClient:
 
         resp = await bounded_get(
             self._client,
-            f"{self._base}/{filter_id}/{region}/{filter_id}_{region}_{resolution}_{timestamp}.json"
+            f"{self._base}/{filter_id}/{region}/{filter_id}_{region}_{resolution}_{timestamp}.json",
         )
         resp.raise_for_status()
         return resp.json()
@@ -94,14 +93,16 @@ class SmardClient:
     ) -> list[int]:
         """Verfügbare Zeitstempel für eine Datenreihe."""
         resp = await bounded_get(
-            self._client,
-            f"{self._base}/{filter_id}/{region}/index_{resolution}.json"
+            self._client, f"{self._base}/{filter_id}/{region}/index_{resolution}.json"
         )
         resp.raise_for_status()
         return resp.json().get("timestamps", [])
 
     async def get_daily_window(
-        self, filter_id: int, days: int = 14, end_date: date | None = None,
+        self,
+        filter_id: int,
+        days: int = 14,
+        end_date: date | None = None,
     ) -> dict:
         """Read a Berlin calendar window across SMARD chunk boundaries.
 
@@ -114,8 +115,13 @@ class SmardClient:
         end_date = end_date or datetime.now(berlin).date()
         start_date = end_date - timedelta(days=days - 1)
         start = int(datetime.combine(start_date, time.min, berlin).timestamp() * 1000)
-        stop = int(datetime.combine(end_date + timedelta(days=1), time.min, berlin).timestamp() * 1000)
-        timestamps = sorted(set(await self.get_available_timestamps(filter_id, resolution="day")))
+        stop = int(
+            datetime.combine(end_date + timedelta(days=1), time.min, berlin).timestamp()
+            * 1000
+        )
+        timestamps = sorted(
+            set(await self.get_available_timestamps(filter_id, resolution="day"))
+        )
         first = max(0, bisect_right(timestamps, start) - 1)
         chunks = [ts for ts in timestamps[first:] if ts < stop]
         # Daily data should require at most one chunk per calendar day plus
@@ -124,7 +130,9 @@ class SmardClient:
             raise ValueError("Unerwartete Anzahl von Datenblöcken.")
         daily = {}
         for timestamp in chunks:
-            data = await self.get_chart_data(filter_id, resolution="day", timestamp=timestamp)
+            data = await self.get_chart_data(
+                filter_id, resolution="day", timestamp=timestamp
+            )
             if "error" in data:
                 raise ValueError("Zeitreihe nicht verfügbar.")
             for ts, value in sorted(data.get("series", []), key=lambda item: item[0]):

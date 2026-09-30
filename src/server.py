@@ -6,14 +6,14 @@ Buendelt 10 kostenlose deutsche APIs:
 - DWD-Wetterwarnungen (Sturm, Gewitter, Starkregen etc.)
 - NINA Katastrophenwarnungen
 - Energiemarkt (SMARD/Bundesnetzagentur)
-- Energiepreise (Strom-/Gaspreise via SMARD)
+- Energiepreise (Strompreise via SMARD)
 - Bundestag (Drucksachen, Vorgaenge)
 - Pollenflug (DWD)
 - Statistik (Destatis via Eurostat — BIP, Bevoelkerung, Inflation)
 - Bundesgesetze (gesetze-im-internet.de — 6000+ Gesetze)
 """
 
-from mcp.server.fastmcp import FastMCP
+from mcp.server.mcpserver import MCPServer
 
 from src.tools.verkehr import register_verkehr_tools
 from src.tools.wetter import register_wetter_tools
@@ -26,8 +26,8 @@ from src.tools.gesundheit import register_gesundheit_tools
 from src.tools.statistik import register_statistik_tools
 from src.tools.recht import register_recht_tools
 
-# FastMCP Server erstellen
-mcp = FastMCP(
+# MCP-Server erstellen
+mcp = MCPServer(
     "Germany MCP Server",
     instructions=(
         "Gibt AI-Agents Zugriff auf deutsche Behoerden-Daten: "
