@@ -19,11 +19,11 @@ classifiers = [
     "Topic :: Software Development :: Libraries",
 ]
 dependencies = [
-    "mcp[cli]>=1.0.0",
-    "httpx>=0.27.0",
-    "python-dotenv>=1.0.0",
+    "mcp[cli]>=2.0.0,<3",
+    "httpx>=0.28.1",
+    "python-dotenv>=1.2.3",
     "defusedxml>=0.7.1",
-    "tzdata>=2024.1; platform_system == 'Windows'",
+    "tzdata>=2026.4; platform_system == 'Windows'",
 ]
 
 [project.urls]
