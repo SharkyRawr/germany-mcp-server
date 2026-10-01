@@ -1,0 +1,135 @@
+# Apply with: kubectl apply -f kubernetes/deployment.yaml
+# Before production use, pin the image to a published immutable digest.
+# External access needs a gateway with TLS and authentication; add its hostname
+# to MCP_ALLOWED_HOSTS and browser origins to MCP_ALLOWED_ORIGINS below.
+# After ConfigMap changes, reload environment variables with:
+# kubectl rollout restart deployment/germany-mcp-server
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: germany-mcp-server
+  labels:
+    app.kubernetes.io/name: germany-mcp-server
+data:
+  MCP_TRANSPORT: streamable-http
+  PORT: "8000"
+  # Short Service name works within the deployment namespace.
+  # Add qualified Service names if clients use them.
+  MCP_ALLOWED_HOSTS: "germany-mcp-server:*,localhost:*,127.0.0.1:*"
+  MCP_ALLOWED_ORIGINS: "http://localhost:*,http://127.0.0.1:*"
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: germany-mcp-server
+  labels:
+    app.kubernetes.io/name: germany-mcp-server
+spec:
+  replicas: 1
+  revisionHistoryLimit: 1
+  minReadySeconds: 10
+  progressDeadlineSeconds: 300
+  strategy:
+    type: RollingUpdate
+    rollingUpdate:
+      maxSurge: 1
+      maxUnavailable: 0
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: germany-mcp-server
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: germany-mcp-server
+    spec:
+      automountServiceAccountToken: false
+      terminationGracePeriodSeconds: 60
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 10001
+        runAsGroup: 10001
+        seccompProfile:
+          type: RuntimeDefault
+      topologySpreadConstraints:
+        - maxSkew: 1
+          topologyKey: kubernetes.io/hostname
+          whenUnsatisfiable: ScheduleAnyway
+          labelSelector:
+            matchLabels:
+              app.kubernetes.io/name: germany-mcp-server
+      containers:
+        - name: server
+          image: ghcr.io/sharkyrawr/germany-mcp-server:master
+          imagePullPolicy: Always
+          ports:
+            - name: http
+              containerPort: 8000
+          envFrom:
+            - configMapRef:
+                name: germany-mcp-server
+          env:
+            # Optional: create this Secret to enable Bundestag tools.
+            - name: BUNDESTAG_API_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: germany-mcp-server
+                  key: BUNDESTAG_API_KEY
+                  optional: true
+          # Starting values; tune against observed load and cache size.
+          resources:
+            requests:
+              cpu: 100m
+              memory: 128Mi
+            limits:
+              cpu: "1"
+              memory: 512Mi
+          securityContext:
+            allowPrivilegeEscalation: false
+            readOnlyRootFilesystem: true
+            capabilities:
+              drop: [ALL]
+          startupProbe:
+            httpGet:
+              path: /healthz
+              port: http
+            periodSeconds: 2
+            timeoutSeconds: 2
+            failureThreshold: 30
+          readinessProbe:
+            httpGet:
+              path: /healthz
+              port: http
+            periodSeconds: 5
+            timeoutSeconds: 2
+          livenessProbe:
+            httpGet:
+              path: /healthz
+              port: http
+            periodSeconds: 15
+            timeoutSeconds: 2
+            failureThreshold: 3
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: germany-mcp-server
+  labels:
+    app.kubernetes.io/name: germany-mcp-server
+spec:
+  type: ClusterIP
+  selector:
+    app.kubernetes.io/name: germany-mcp-server
+  ports:
+    - name: http
+      port: 8000
+      targetPort: http
+---
+apiVersion: policy/v1
+kind: PodDisruptionBudget
+metadata:
+  name: germany-mcp-server
+spec:
+  minAvailable: 1
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: germany-mcp-server
