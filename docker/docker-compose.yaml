@@ -1,0 +1,43 @@
+# Start: docker compose -f docker/docker-compose.yaml up -d
+# Set GERMANY_MCP_IMAGE to a published image digest for reproducible deployments.
+# Configure variables in the shell or docker/.env; keep API keys out of this file.
+services:
+  germany-mcp-server:
+    image: "${GERMANY_MCP_IMAGE:-ghcr.io/sharkyrawr/germany-mcp-server:latest}"
+    pull_policy: always
+    restart: unless-stopped
+    init: true
+    stop_grace_period: 10s
+    user: "10001:10001"
+    read_only: true
+    cap_drop:
+      - ALL
+    security_opt:
+      - no-new-privileges:true
+    # Bind to a host interface with BIND_ADDRESS; local access is the default.
+    # Remote access requires matching MCP_ALLOWED_HOSTS and access controls.
+    ports:
+      - "${BIND_ADDRESS:-127.0.0.1}:${HOST_PORT:-8000}:8000"
+    environment:
+      MCP_TRANSPORT: streamable-http
+      PORT: "8000"
+      MCP_ALLOWED_HOSTS: "${MCP_ALLOWED_HOSTS:-germany-mcp-server:*,localhost:*,127.0.0.1:*}"
+      MCP_ALLOWED_ORIGINS: "${MCP_ALLOWED_ORIGINS:-http://localhost:*,http://127.0.0.1:*}"
+      # Optional; other tools work without a Bundestag API key.
+      BUNDESTAG_API_KEY: "${BUNDESTAG_API_KEY:-}"
+    # Starting values; tune against observed load and cache size.
+    cpus: 1.0
+    mem_limit: 512m
+    mem_reservation: 128m
+    pids_limit: 128
+    healthcheck:
+      # Inherit the image's /healthz check (Python; no curl dependency).
+      interval: 15s
+      timeout: 3s
+      start_period: 60s
+      retries: 3
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "3"
