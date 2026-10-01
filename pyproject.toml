@@ -9,7 +9,7 @@ description = "MCP-Server für deutsche Behörden-Daten — Autobahn, Wetter, Wa
 readme = "README.md"
 license = "MIT"
 requires-python = ">=3.11"
-authors = [{ name = "AiAgentKarl" }]
+authors = [{name ="Luna"}, { name = "AiAgentKarl" }]
 keywords = ["mcp", "germany", "open-data", "bundesapi", "ai-agent", "destatis", "dwd", "gesetze"]
 classifiers = [
     "Development Status :: 4 - Beta",

@@ -13,7 +13,11 @@ Buendelt 10 kostenlose deutsche APIs:
 - Bundesgesetze (gesetze-im-internet.de — 6000+ Gesetze)
 """
 
+import os
+
 from mcp.server.mcpserver import MCPServer
+from mcp.server.transport_security import TransportSecuritySettings
+from starlette.responses import PlainTextResponse
 
 from src.tools.verkehr import register_verkehr_tools
 from src.tools.wetter import register_wetter_tools
@@ -50,9 +54,35 @@ register_statistik_tools(mcp)
 register_recht_tools(mcp)
 
 
+@mcp.custom_route("/healthz", methods=["GET"])
+async def healthz(request):
+    return PlainTextResponse("ok")
+
+
 def main():
     """Server starten."""
-    mcp.run(transport="stdio")
+    transport = os.getenv("MCP_TRANSPORT", "stdio")
+    if transport == "streamable-http":
+        mcp.run(
+            transport="streamable-http",
+            host="0.0.0.0",
+            port=int(os.getenv("PORT", "8000")),
+            stateless_http=True,
+            json_response=True,
+            transport_security=TransportSecuritySettings(
+                enable_dns_rebinding_protection=True,
+                allowed_hosts=os.getenv(
+                    "MCP_ALLOWED_HOSTS", "localhost:*,127.0.0.1:*,[::1]:*"
+                ).split(","),
+                allowed_origins=os.getenv(
+                    "MCP_ALLOWED_ORIGINS", "http://localhost:*,http://127.0.0.1:*"
+                ).split(","),
+            ),
+        )
+    elif transport == "stdio":
+        mcp.run(transport="stdio")
+    else:
+        raise ValueError("MCP_TRANSPORT must be stdio or streamable-http")
 
 
 if __name__ == "__main__":

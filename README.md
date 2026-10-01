@@ -56,6 +56,38 @@ Oder direkt von GitHub:
 pip install git+https://github.com/AiAgentKarl/germany-mcp-server.git
 ```
 
+## Docker
+
+Das Image verwendet `python:3-slim-trixie` (aktuelles stabiles Python auf Debian
+Trixie) und die stabilen, in `uv.lock` festgehaltenen Abhängigkeiten.
+`docker build --pull` aktualisiert das Basisimage. Python-Abhängigkeiten mit
+`uv lock --upgrade` aktualisieren; die uv-Version im Dockerfile separat anheben.
+
+```bash
+docker build --pull -t germany-mcp-server .
+docker run --rm --read-only --cap-drop=ALL --security-opt=no-new-privileges \
+  -p 127.0.0.1:8000:8000 -e BUNDESTAG_API_KEY germany-mcp-server
+```
+
+MCP-Endpunkt: `http://localhost:8000/mcp` (Streamable HTTP, stateless).
+Healthcheck: `http://localhost:8000/healthz`. Der Prozess läuft als UID/GID
+10001, benötigt keine Volumes und installiert beim Start keine Pakete.
+Der Gesetzesindex bleibt ein verwerfbarer Cache pro Container.
+
+`PORT` ändert den internen Port (Standard: 8000); das Port-Mapping entsprechend
+anpassen. Ohne `BUNDESTAG_API_KEY` bleiben alle anderen Tools verfügbar.
+Für einen Reverse Proxy `MCP_ALLOWED_HOSTS` (z. B. `mcp.example.org`) und bei
+Browser-Zugriffen `MCP_ALLOWED_ORIGINS` (z. B. `https://mcp.example.org`)
+als kommaseparierte Listen setzen. Standardmäßig sind lokale Hosts erlaubt.
+Der Server enthält keine eingehende Authentifizierung: externe Freigabe über
+einen Gateway mit TLS und Zugriffskontrolle vornehmen.
+
+Für lokale MCP-Clients mit stdio:
+
+```bash
+docker run --rm -i --health-cmd=none -e MCP_TRANSPORT=stdio germany-mcp-server
+```
+
 ## Nutzung mit Claude Code
 
 `.mcp.json` im Projektverzeichnis:
