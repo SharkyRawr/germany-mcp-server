@@ -13,7 +13,7 @@ MCP-Server der AI-Agents Zugriff auf deutsche Behörden-Daten gibt — 16 Tools 
 - `autobahn_ladestationen` — E-Auto-Ladestationen entlang einer Autobahn
 
 ### Wetter (DWD)
-- `wetter_aktuell` — Aktuelles Wetter an einem Ort (30+ deutsche Städte vordefiniert)
+- `wetter_aktuell` — Aktuelles Wetter an einem Ort (vordefinierte deutsche Städte oder Koordinaten)
 - `wetter_warnungen` — DWD-Unwetterwarnungen (Sturm, Gewitter, Hitze etc.)
 
 ### DWD-Wetterwarnungen (NEU in v0.2.0)
@@ -44,16 +44,18 @@ MCP-Server der AI-Agents Zugriff auf deutsche Behörden-Daten gibt — 16 Tools 
 
 ## Installation
 
-Benötigt Python 3.11+ und das MCP Python SDK 2.x (wird automatisch installiert).
+Der aktuelle GitHub-Stand benötigt Python 3.11+ und das MCP Python SDK 2.x (wird automatisch installiert).
+
+Aktuellen Stand dieses Forks installieren:
+
+```bash
+pip install git+https://github.com/SharkyRawr/germany-mcp-server.git
+```
+
+Die ursprüngliche Veröffentlichung ist auch auf PyPI verfügbar; sie kann vom aktuellen Stand dieses Forks abweichen:
 
 ```bash
 pip install germany-mcp-server
-```
-
-Oder direkt von GitHub:
-
-```bash
-pip install git+https://github.com/AiAgentKarl/germany-mcp-server.git
 ```
 
 ## Docker
@@ -104,7 +106,7 @@ docker run --rm -i --health-cmd=none -e MCP_TRANSPORT=stdio germany-mcp-server
 }
 ```
 
-Alternativ mit `uvx` (kein lokales Install nötig):
+Alternativ den aktuellen GitHub-Stand mit `uvx` starten (keine vorherige Installation nötig):
 
 ```json
 {
@@ -112,7 +114,7 @@ Alternativ mit `uvx` (kein lokales Install nötig):
     "germany": {
       "type": "stdio",
       "command": "uvx",
-      "args": ["germany-mcp-server"]
+      "args": ["--from", "git+https://github.com/SharkyRawr/germany-mcp-server.git", "germany-server"]
     }
   }
 }
@@ -158,8 +160,7 @@ export BUNDESTAG_API_KEY=dein-key-hier
 
 ## Changelog
 
-### Unveröffentlicht
-- Migration auf MCP Python SDK 2.x.
+### Aktueller Stand (GitHub)
 - Wetterwarnungen lesen die lokalisierten Bright-Sky-Felder (Deutsch, ersatzweise Englisch).
 - Gaspreisabfragen geben einen Fehler zurück: Die bisherige SMARD-Reihe 4996 enthält belgische Strompreise, keine Gaspreise.
 - Bundestag DIP erfordert einen API-Key; fehlende oder abgelehnte Zugangsdaten liefern klare Fehler.
