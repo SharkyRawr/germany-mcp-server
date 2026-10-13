@@ -1,4 +1,4 @@
-"""Offline regressions: python -m unittest discover -s tests -v."""
+"""Offline regressions: uv run --locked python -m unittest discover -s tests -v."""
 
 import unittest
 from datetime import date

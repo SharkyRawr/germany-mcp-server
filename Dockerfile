@@ -1,11 +1,11 @@
-FROM python:3-slim-trixie AS builder
+FROM python:3.15-slim-trixie AS builder
 COPY --from=ghcr.io/astral-sh/uv:0.12.21 /uv /usr/local/bin/uv
 WORKDIR /app
 COPY pyproject.toml uv.lock README.md LICENSE ./
 COPY src ./src
 RUN uv sync --locked --no-dev --no-editable --compile-bytecode --python /usr/local/bin/python
 
-FROM python:3-slim-trixie
+FROM python:3.15-slim-trixie
 RUN apt-get update \
     && apt-get upgrade -y \
     && apt-get install -y --no-install-recommends ca-certificates tzdata \

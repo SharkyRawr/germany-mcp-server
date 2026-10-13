@@ -45,7 +45,7 @@ class NinaClient:
                 ):
                     raise ValueError("Ungültiges Warnungsformat")
                 all_warnings.extend({**w, "_channel": channel} for w in data)
-            except (httpx.HTTPError, ValueError, TimeoutError):
+            except httpx.HTTPError, ValueError, TimeoutError:
                 failed_channels.append(channel)
         if failed_channels:
             raise IncompleteWarningsError(all_warnings, failed_channels)

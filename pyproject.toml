@@ -8,7 +8,7 @@ version = "0.2.1"
 description = "MCP-Server für deutsche Behörden-Daten — Autobahn, Wetter, Warnungen, Energie, Statistik, Gesetze, Politik und mehr"
 readme = "README.md"
 license = "MIT"
-requires-python = ">=3.11"
+requires-python = ">=3.15"
 authors = [{name ="Luna"}, { name = "AiAgentKarl" }]
 keywords = ["mcp", "germany", "open-data", "bundesapi", "ai-agent", "destatis", "dwd", "gesetze"]
 classifiers = [
@@ -38,4 +38,4 @@ germany-server = "src.server:main"
 packages = ["src"]
 
 [tool.black]
-target-version = ["py311"]
+target-version = ["py315"]

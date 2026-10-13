@@ -7,7 +7,7 @@ import unittest
 from pathlib import Path
 
 
-@unittest.skipUnless(shutil.which("black"), "System Black is not installed")
+@unittest.skipUnless(shutil.which("uv"), "uv is not installed")
 class GitHookTest(unittest.TestCase):
     def test_hook_formats_without_staging(self):
         source = Path(__file__).resolve().parents[1]

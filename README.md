@@ -44,23 +44,23 @@ MCP-Server der AI-Agents Zugriff auf deutsche Behörden-Daten gibt — 16 Tools 
 
 ## Installation
 
-Der aktuelle GitHub-Stand benötigt Python 3.11+ und das MCP Python SDK 2.x (wird automatisch installiert).
+Der aktuelle GitHub-Stand benötigt Python 3.15+ und das MCP Python SDK 2.x (wird automatisch installiert).
 
 Aktuellen Stand dieses Forks installieren:
 
 ```bash
-pip install git+https://github.com/SharkyRawr/germany-mcp-server.git
+python3.15 -m pip install git+https://github.com/SharkyRawr/germany-mcp-server.git
 ```
 
 Die ursprüngliche Veröffentlichung ist auch auf PyPI verfügbar; sie kann vom aktuellen Stand dieses Forks abweichen:
 
 ```bash
-pip install germany-mcp-server
+python3.15 -m pip install germany-mcp-server
 ```
 
 ## Docker
 
-Das Image verwendet `python:3-slim-trixie` (aktuelles stabiles Python auf Debian
+Das Image verwendet `python:3.15-slim-trixie` (Python 3.15 auf Debian
 Trixie) und die stabilen, in `uv.lock` festgehaltenen Abhängigkeiten.
 `docker build --pull` aktualisiert das Basisimage. Python-Abhängigkeiten mit
 `uv lock --upgrade` aktualisieren; die uv-Version im Dockerfile separat anheben.
@@ -99,8 +99,8 @@ docker run --rm -i --health-cmd=none -e MCP_TRANSPORT=stdio germany-mcp-server
   "mcpServers": {
     "germany": {
       "type": "stdio",
-      "command": "python",
-      "args": ["-m", "src.server"]
+      "command": "uv",
+      "args": ["run", "--locked", "python", "-m", "src.server"]
     }
   }
 }
@@ -114,7 +114,7 @@ Alternativ den aktuellen GitHub-Stand mit `uvx` starten (keine vorherige Install
     "germany": {
       "type": "stdio",
       "command": "uvx",
-      "args": ["--from", "git+https://github.com/SharkyRawr/germany-mcp-server.git", "germany-server"]
+      "args": ["--python", "3.15", "--from", "git+https://github.com/SharkyRawr/germany-mcp-server.git", "germany-server"]
     }
   }
 }
@@ -187,18 +187,18 @@ Die Grenzwerte und die Cache-Dauer stehen in `src/config.py`.
 
 ## Tests
 
-Git-Hook einmal pro Checkout aktivieren (systemweit installiertes `black` muss im `PATH` liegen):
+Git-Hook einmal pro Checkout aktivieren (`uv` muss im `PATH` liegen):
 
 ```bash
 ./scripts/setup-hooks.sh
 ```
 
-Der Pre-Commit-Hook formatiert Python-Dateien mit `black .`. Bei ungestagten Python-Änderungen bricht er ab: Änderungen prüfen, mit `git add` stagen und erneut committen. Der Hook staged keine Dateien automatisch.
+Der Pre-Commit-Hook formatiert Python-Dateien mit `uvx --python 3.15 black .`. Bei ungestagten Python-Änderungen bricht er ab: Änderungen prüfen, mit `git add` stagen und erneut committen. Der Hook staged keine Dateien automatisch.
 
 Nach der Installation lassen sich die Regressionstests ohne externe API-Aufrufe ausführen:
 
 ```bash
-python -m unittest discover -s tests -v
+uv run --locked python -m unittest discover -s tests -v
 ```
 
 ## Lizenz
